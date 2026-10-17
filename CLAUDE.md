@@ -17,8 +17,11 @@ admin.
 EXRtoSRGB.exe     the build, written to the repo root so it is easy to find.
 cli.py            the scriptable entry point. imports core only, never a window.
 app.ico           the aperture, multi-size. wired into the spec and the window.
+app.icns          the same aperture for macOS, rebuilt at 1024 by make_icns.py.
 core.py           conversion. no UI imports. this is what the tests exercise.
 exr2srgb.py       pywebview window + the Api bridge exposed to JavaScript.
+macos.py          macOS shell integration. imported only on darwin. see below.
+EXRtoSRGB-mac.spec / build_mac.sh   the .app and .dmg. output in dist/.
 ui/theme.css      the warm-neutral palette. colour tokens only, no layout.
 ui/app.css        application styles, built only on theme.css tokens.
 ui/index.html     markup.
@@ -313,6 +316,11 @@ pytest -q
 ```
 
 `EXR2SRGB_DEBUG=1` opens devtools.
+
+On the Mac the system Python is 3.9, too old for the wheels: use the repo's
+`.venv` (Python 3.12, made by `uv`, Dropbox-ignored), i.e.
+`.venv/bin/python exr2srgb.py` and `.venv/bin/python -m pytest -q`.
+`./build_mac.sh` makes it if it is missing. See [macOS](#macos).
 
 `build_exe.bat` runs `EXRtoSRGB.spec`. Three things in that spec are load-bearing:
 `collect_all` for OpenImageIO and PyOpenColorIO (the DLLs, without which the exe
@@ -740,6 +748,108 @@ elevation prompt.
 
 Note the updater only reaches users who **already have a build containing it**.
 Anyone older still has to take the release-page link once.
+
+## macOS
+
+Added 2026-10-16. The research before building it: nothing on macOS does this
+whole job. DJV and mrv2 view EXR through OCIO but are players, not batch
+converters with layer scoring; tev has no OCIO; `oiiotool --ociodisplay` is the
+transform without any of the layer, alpha or cryptomatte handling; the Mac
+EXR converters found (Sequency, UniConverter) are video-first or gamma-only.
+So it is a port of this app, not a new one.
+
+**One codebase.** `core.py`, `cli.py` and `ui/` are unchanged in behaviour;
+`exr2srgb.py` branches on `IS_MAC` and everything macOS-specific lives in
+`macos.py`, imported only on darwin, so no Windows code path changed. The
+`os.name != "nt"` guards that already existed made most of this a matter of
+filling in the other branch.
+
+| Windows | macOS |
+|---|---|
+| `%LOCALAPPDATA%\EXRtoSRGB` | `~/Library/Application Support/EXRtoSRGB` |
+| Win32 clipboard via ctypes | `NSPasteboard` |
+| `explorer /select,` | `open -R` |
+| `MessageBoxW` | `osascript display alert` |
+| ProgID + UserChoice | Launch Services `setDefaultApplicationAtURL:` |
+| Explorer verb submenu | a Quick Action in `~/Library/Services` |
+| one process per double-click | `application:openFiles:` into the running app |
+| Inno Setup installer + updater | `.dmg`; the update button opens the release page |
+
+**Double-click is an Apple Event, not argv.** Launch Services never starts a
+second process: it sends the file to the running one. So `--view` only covers a
+cold launch (PyInstaller's `argv_emulation=True` turns the launch event into
+argv), and every later double-click arrives at `application:openFiles:`, which
+opens a viewer in-process. Clicking the Dock icon of an app showing only viewers
+arrives at `applicationShouldHandleReopen:` and must bring the converter up -
+`open_converter()` is idempotent for that reason. pywebview's `AppDelegate`
+implements neither, so `install_app_events` adds them as a pyobjc **category**,
+which must be named `AppDelegate` (pyobjc refuses any other name). The handlers
+spawn a thread: creating a pywebview window inside an AppKit callback waits on
+the run loop it is blocking. All three paths verified against the built bundle:
+cold launch, cold launch from a file, file into a running app, reopen.
+
+**The default-app API prompts, every time.** On macOS 27
+`setDefaultApplicationAtURL:toOpenContentType:` puts up a system confirmation
+and its completion handler waits for the answer - an accepted change took 18.6s
+in testing, which is a person reading a dialog. A "no" comes back as
+`NSCocoaErrorDomain 256 "The file couldn't be opened"` wrapping
+`userCanceledErr (-128)`, which reads like a failure. `macos._declined` digs
+it out and raises `Declined`, and the toggle reports "nothing changed" and
+settles on what Launch Services actually says. Handing the type back is a
+change too and prompts as well. **Do not test this casually**: each call puts a
+dialog in front of the user, and a declined restore leaves `.exr` with a dev
+build in `dist/`.
+
+Only a bundle can be a default handler, so from a checkout the toggle is hidden
+(`bundle_path()` is None) - the macOS form of the `Applications\python.exe`
+trap. The Quick Action works from a checkout, since it just runs a command.
+
+**`.exr` is `com.ilm.openexr-image`**, declared by macOS. The bundle claims it
+in `CFBundleDocumentTypes` with `LSHandlerRank` **Alternate** - listed under
+Open With, never the default unless the user ticks the toggle. `Owner` would
+let Launch Services hand us `.exr` at install, the silent takeover the Windows
+build refuses too.
+
+**One Quick Action with a chooser, not five.** Finder cannot nest Quick
+Actions. `convert_menu` asks with `choose from list` (built from
+`CONVERT_VERBS`, still the single source), converts the whole selection
+through `core.convert_many`, and posts a notification. Finder hands over the
+selection at once, so a sequence is one process. `NSRequiredContext` (Finder)
+and `NSSendFileTypes` (the EXR UTI) keep it out of every other file's menu.
+The workflow records an absolute path, so `Api.context_menu()` repairs it at
+startup like `repair_association()`. Strings reach AppleScript as **argv**,
+never spliced into source - filenames are arbitrary Unicode. Verified with
+`automator -i <file> <workflow>`, which runs it the way Finder does.
+
+**Coordinates are screen-local on macOS.** The Cocoa backend positions windows
+relative to `NSScreen.mainScreen()` with y flipped to count from the top, and
+reports positions back the same way, so `screen_rects()` on a Mac is that one
+screen. `webview.screens` gives global, bottom-up frames and must not be
+compared against.
+
+**Ctrl-click is a right-click on a Mac.** The handlers already accepted
+`metaKey`; `applyPlatform()` in `app.js` rewrites `.mod` / `.alt` spans to ⌘ /
+⌥, and `html[data-os]` picks the `.only-win` / `.only-mac` wording. Before
+init the Windows text shows, which is what every build did before.
+
+**Building.** `./build_mac.sh` → `dist/EXR to sRGB.app` + `dist/EXRtoSRGB_v<ver>_macOS_<arch>.dmg`.
+onedir + `BUNDLE`, not onefile, and no UPX (it breaks signatures). The bundle
+is re-signed ad hoc as a whole after PyInstaller, or Apple Silicon calls it
+damaged; it is **not notarised**, so a downloaded copy needs right-click → Open
+once. The build is the host's architecture only - OpenImageIO's wheels are per
+arch - so an Intel build needs an Intel Mac. `--diag` is the smoke test at the
+end of the script: it imports the whole frozen app headless. A frozen convert
+was checked bit-identical to a source one.
+
+`dist/` and `.venv/` are created with `com.dropbox.ignored` set before anything
+is written into them, per the root CLAUDE.md - a 74 MB bundle of dylibs has no
+business syncing to the Windows machine.
+
+`make_icns.py` rebuilds `app.icns` from `app.ico`, whose largest frame is 256px.
+The aperture is upscaled as a coverage *mask* and re-thresholded on a 4x canvas,
+then intersected with a drawn circle - cropping at the half-coverage bbox
+shaved the rim flat on four sides. The tile is redrawn on Apple's grid (824 on
+1024, with a shadow), not run to the edge.
 
 ## Installing
 

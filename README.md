@@ -94,6 +94,28 @@ are compiled in. Windows supplies the webview, so there's no bundled browser.
 > **More info → Run anyway.** Code signing is a paid annual certificate rather than
 > anything that can be fixed in the source.
 
+### macOS
+
+From the [releases page](../../releases), open
+`EXRtoSRGB_v<version>_macOS_arm64.dmg` and drag **EXR to sRGB** into
+Applications. Same app: the converter, the viewer, cryptomatte and the command
+line are the same code, and the test suite — the ACES ladder included — passes
+on both.
+
+- **Apple Silicon.** The build is per architecture, because OpenImageIO's
+  wheels are. An Intel Mac needs its own build — run `./build_mac.sh` on one.
+- **Double-click opens the viewer** once you tick *Open .exr files with this
+  viewer* under the **⚙**. macOS asks you to confirm the change, and unticking
+  hands `.exr` back to whatever had it, usually Preview. *Open With* lists the
+  app either way.
+- **Right-click → Quick Actions → Convert to sRGB…** — see
+  [below](#right-click--convert-to-srgb).
+- **Updates** link to the release page; the in-place updater is Windows-only.
+
+> The app is signed ad hoc, not notarised, so the first launch of a downloaded
+> copy needs **right-click → Open → Open**. Notarisation needs a paid Apple
+> Developer account. A copy you build yourself opens normally.
+
 There's a sample render in [`docs/sample_render.exr`](docs/sample_render.exr) if you
 want something to drop on it straight away — the frame in the screenshots above.
 Scene-linear ACEScg, 1600 × 1000, with highlights up past 10.0, so it actually
@@ -339,6 +361,13 @@ The verbs are registered under `SystemFileAssociations\.exr`, so they show up
 whatever application owns the file type, and `.exr` files get their own aperture
 icon once the association is on.
 
+**On a Mac** it's a Quick Action: right-click any `.exr` in Finder → **Quick
+Actions → Convert to sRGB…**, pick a preset from the same list, and the whole
+selection converts — a 240-frame sequence is one job, not 240. A notification
+says when it's done. Finder can't nest Quick Actions, which is why it's one
+entry with a chooser rather than five. It lives in `~/Library/Services` and
+unticking the toggle deletes it.
+
 <details>
 <summary>Why it's under "Show more options" on Windows 11</summary>
 
@@ -404,6 +433,9 @@ Press **?** in either window, or open the **⚙** in the converter.
 **Viewer** — `F` fit · `1` actual pixels · `+` `−` zoom · `R` `G` `B` `A` channels ·
 `C` colour · `E` eyedropper · `\` cycle A/B · `Esc` close
 
+On a Mac, `Ctrl` is `⌘` and `Alt` is `⌥` — Ctrl-click is a right-click there, so
+matte picking is `⌘`-click. The **?** sheet shows the Mac keys.
+
 ---
 
 ## Building
@@ -416,6 +448,17 @@ Runs `EXRtoSRGB.spec` with PyInstaller. The spec carries the parts that are easy
 get wrong: the OIIO/OCIO DLLs, the `ui/` folder, and pywebview's WebView2 backend.
 The exe lands in the repo root; PyInstaller's scratch goes to `%TEMP%`.
 
+On a Mac:
+
+```bash
+./build_mac.sh
+```
+
+Runs `EXRtoSRGB-mac.spec`, signs the bundle ad hoc, and writes
+`dist/EXR to sRGB.app` plus a `.dmg` for the release page. It makes its own
+`.venv` (marked for Dropbox to ignore) if there isn't one. `make_icns.py`
+regenerates `app.icns` from `app.ico`.
+
 ---
 
 ## How it's built
@@ -426,7 +469,7 @@ exercises, so colour behaviour is verifiable without opening a window.
 
 `exr2srgb.py` is a [pywebview](https://pywebview.flowrl.com/) window: Python stays
 the application and the interface is HTML and CSS rendered by the OS's own webview
-(WebView2 on Windows), which is why there's no bundled browser and the download is
+(WebView2 on Windows, WKWebView on macOS), which is why there's no bundled browser and the download is
 around 37 MB rather than 150.
 
 ---

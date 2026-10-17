@@ -305,7 +305,8 @@
               <div class="placeholder">Add a file to preview the conversion</div>
             </div>
             <div class="pick-hint" id="pick-hint" hidden>
-              Ctrl-click to select · Alt-click to deselect
+              <span class="mod">Ctrl</span>-click to select ·
+              <span class="alt">Alt</span>-click to deselect
             </div>
 
             <!--
@@ -427,7 +428,9 @@
         list into a scroll.
 
         The integration toggles write only under HKCU, so no elevation and
-        nothing changes for other accounts. Each is behind an explicit toggle:
+        nothing changes for other accounts. On macOS they are a Quick Action in
+        ~/Library/Services and a Launch Services default - per user as well.
+        Each OS's wording is in the markup, picked by html[data-os]. Each is behind an explicit toggle:
         silently seizing a file type is not something a converter should do on
         first run.
       -->
@@ -440,32 +443,46 @@
 
           <div class="sheet-cols">
             <section id="integration-section" hidden>
-              <h3 class="sheet-h">Windows integration</h3>
+              <h3 class="sheet-h"><span class="only-win">Windows</span><span class="only-mac">Finder</span> integration</h3>
               <div class="prefs">
                 <label class="check" id="assoc-wrap" hidden>
                   <input autocomplete="off" type="checkbox" id="assoc" />
                   <span class="box"></span>
                   <span>Open .exr files with this viewer</span>
                 </label>
-                <p class="prefs-note">
+                <p class="prefs-note assoc-note only-win">
                   Double-clicking an .exr opens it here, and .exr files get their
                   own aperture icon. Untick to hand the file type back.
+                </p>
+                <p class="prefs-note assoc-note only-mac">
+                  Double-clicking an .exr opens it here. Untick to hand the file
+                  type back to the app that had it.
                 </p>
 
                 <label class="check" id="ctx-wrap" hidden>
                   <input autocomplete="off" type="checkbox" id="ctx" />
                   <span class="box"></span>
-                  <span>Right-click → Convert to sRGB</span>
+                  <span class="only-win">Right-click → Convert to sRGB</span>
+                  <span class="only-mac">Right-click → Quick Actions → Convert to sRGB…</span>
                 </label>
-                <p class="prefs-note">
+                <p class="prefs-note ctx-note only-win">
                   Adds a convert submenu to .exr files in Explorer, whatever app
                   owns the file type. On Windows 11 it sits under “Show more
                   options”.
                 </p>
+                <p class="prefs-note ctx-note only-mac">
+                  Adds a Quick Action to .exr files in Finder, whatever app owns
+                  the file type. It asks for a preset, then converts the whole
+                  selection — a sequence in one go.
+                </p>
 
-                <p class="prefs-foot">
+                <p class="prefs-foot only-win">
                   Written per-user under HKCU — no admin rights, and nothing
                   changes for anyone else on the machine.
+                </p>
+                <p class="prefs-foot only-mac">
+                  Per user — the Quick Action lives in ~/Library/Services. No
+                  admin rights, and nothing changes for anyone else on the Mac.
                 </p>
               </div>
             </section>
@@ -479,18 +496,18 @@
               <dl class="keys">
                 <div class="grp">Files</div>
                 <dt>↑ ↓</dt><dd>Previous / next file</dd>
-                <dt>Ctrl + O</dt><dd>Add files</dd>
+                <dt><span class="mod">Ctrl</span> + O</dt><dd>Add files</dd>
                 <dt>Drop</dt><dd>Drag .exr files onto the window</dd>
 
                 <div class="grp">Convert</div>
-                <dt>Ctrl + ↵</dt><dd>Convert</dd>
+                <dt><span class="mod">Ctrl</span> + ↵</dt><dd>Convert</dd>
                 <dt>Esc</dt><dd>Cancel a running convert</dd>
 
                 <div class="grp">Preview</div>
                 <dt>E</dt><dd>Eyedropper — click a pixel to lock and copy it</dd>
                 <dt>, .</dt><dd>Previous / next frame of a sequence</dd>
-                <dt>Ctrl + click</dt><dd>Add the object under the cursor</dd>
-                <dt>Alt + click</dt><dd>Remove it again</dd>
+                <dt><span class="mod">Ctrl</span> + click</dt><dd>Add the object under the cursor</dd>
+                <dt><span class="alt">Alt</span> + click</dt><dd>Remove it again</dd>
                 <dt>Drag divider</dt><dd>Resize the preview</dd>
                 <dt>← →</dt><dd>Resize it from the keyboard</dd>
                 <dt>Double-click</dt><dd>Divider back to the middle size</dd>

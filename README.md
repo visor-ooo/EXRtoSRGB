@@ -17,7 +17,7 @@ destination is a comp rather than a screen. **On Windows and macOS.**
 
 <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-latest%20release-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for Windows" height="46"></a>
 &nbsp;
-<a href="../../releases/tag/v3.3.0"><img src="https://img.shields.io/badge/⬇%20Download%20for%20macOS-Apple%20Silicon-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for macOS" height="46"></a>
+<a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20Download%20for%20macOS-Apple%20Silicon-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for macOS" height="46"></a>
 
 **Installs in seconds. No admin needed.** · [All releases](../../releases)
 
@@ -96,7 +96,7 @@ are compiled in. Windows supplies the webview, so there's no bundled browser.
 > **More info → Run anyway.** Code signing is a paid annual certificate rather than
 > anything that can be fixed in the source.
 
-### macOS — [⬇ download v3.3.0](../../releases/tag/v3.3.0)
+### macOS — [⬇ download the latest release](../../releases/latest)
 
 Open `EXRtoSRGB_v<version>_macOS_arm64.dmg` and drag **EXR to sRGB** into
 Applications. Same app: the converter, the viewer, cryptomatte and the command

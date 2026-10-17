@@ -1223,6 +1223,9 @@ function wire() {
   $('assoc').onchange = async () => {
     const r = await window.pywebview.api.set_association($('assoc').checked);
     if (!r.ok) $('assoc').checked = !$('assoc').checked;
+    // What the OS reports, not what was clicked: the request can be outranked
+    // (Windows) or declined in the system prompt (macOS).
+    else if (typeof r.associated === 'boolean') $('assoc').checked = r.associated;
   };
 
   $('ctx').onchange = async () => {
@@ -1498,6 +1501,21 @@ function wireManualUpdateCheck() {
 }
 
 /*
+ * Platform wording and modifier keys.
+ *
+ * Both OSes ship the same markup: html[data-os] picks the .only-win / .only-mac
+ * text in CSS, and the modifier names are rewritten in place. The handlers
+ * already accept metaKey alongside ctrlKey, which matters more on a Mac than
+ * it looks - Ctrl-click there is a right-click, so the sheet must say ⌘.
+ */
+function applyPlatform(platform) {
+  document.documentElement.setAttribute('data-os', platform || 'other');
+  if (platform !== 'mac') return;
+  document.querySelectorAll('.mod').forEach((el) => { el.textContent = '⌘'; });
+  document.querySelectorAll('.alt').forEach((el) => { el.textContent = '⌥'; });
+}
+
+/*
  * The in-app update.
  *
  * Python does the work - download, verify against the release's published
@@ -1512,6 +1530,17 @@ function offerInstall(info) {
   const out = $('update-status');
   if (!btn) return;
   btn.hidden = false;
+  // Only the Windows build installs itself - the release asset is an Inno
+  // Setup installer. Elsewhere the same button is the release page, so the
+  // offer is never a button that can only fail.
+  if (!info.installable) {
+    btn.textContent = `Download v${info.latest}`;
+    btn.onclick = () => {
+      window.pywebview.api.open_url(info.url);
+      out.textContent = 'Opened the release page in your browser.';
+    };
+    return;
+  }
   btn.textContent = `Update to v${info.latest}`;
   btn.onclick = async () => {
     btn.disabled = true;
@@ -1690,6 +1719,7 @@ window.addEventListener('pywebviewready', async () => {
   // DOM and keep driving .value / onchange, so everything above is unaffected.
   upgradeSelects();
   const init = await window.pywebview.api.init();
+  applyPlatform(init.platform);
   setTheme(init.theme || 'dark');
   setPreviewWidth(init.preview_width || PREVIEW_SIZES.m,
                   { persist: false, rerender: false });
@@ -1718,6 +1748,15 @@ window.addEventListener('pywebviewready', async () => {
   // shortcuts. Only the integration half drops out when it is unsupported,
   // which leaves the card single-column via the same grid.
   $('integration-section').hidden = !(assoc.supported || ctx.supported);
+  // The notes sit beside their toggles, not inside them, so they go too. On a
+  // Mac this is the normal state from source: only the built .app can be a
+  // default handler, while the Quick Action works from a checkout as well.
+  document.querySelectorAll('.assoc-note').forEach((el) => {
+    el.hidden = !assoc.supported;
+  });
+  document.querySelectorAll('.ctx-note').forEach((el) => {
+    el.hidden = !ctx.supported;
+  });
   $('btn-prefs').hidden = false;
   state.ready = true;
   await refreshLayers();

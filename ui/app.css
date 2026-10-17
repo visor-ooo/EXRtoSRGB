@@ -52,6 +52,16 @@
   display: none !important;
 }
 
+/*
+ * Per-OS wording. app.js sets html[data-os] from Api.init before the sheet can
+ * be opened; until then the Windows text shows, which is what every build did
+ * before there was a Mac one. Shared with the viewer, which loads this file.
+ */
+html[data-os='mac'] .only-win,
+html:not([data-os='mac']) .only-mac {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;

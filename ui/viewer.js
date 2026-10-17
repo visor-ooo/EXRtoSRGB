@@ -651,7 +651,8 @@ async function runConvert(preset) {
       return;
     }
     toast(`Saved ${r.name}`, {
-      hint: 'click to show in Explorer',
+      hint: document.documentElement.getAttribute('data-os') === 'mac'
+        ? 'click to show in Finder' : 'click to show in Explorer',
       onClick: () => window.pywebview.api.reveal(r.path),
     });
   } finally {
@@ -936,6 +937,7 @@ async function startup() {
   wire();
   const init = await window.pywebview.api.init();
   document.documentElement.setAttribute('data-theme', init.theme || 'dark');
+  document.documentElement.setAttribute('data-os', init.platform || 'other');
   V.path = init.path;
   $('vname').textContent = init.name || '—';
   document.title = (init.name || 'EXR viewer') + ' · EXR → sRGB';

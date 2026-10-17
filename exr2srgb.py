@@ -17,6 +17,8 @@ Dependencies:
 
 Build a standalone .exe on Windows:
     build_exe.bat
+Build EXR to sRGB.app on macOS:
+    ./build_mac.sh
 """
 
 import os
@@ -39,6 +41,17 @@ VERSION = "3.2.6"
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 UI_DIR = os.path.join(BASE_DIR, "ui")
 
+# macOS integration lives in its own module, imported only here, so nothing
+# about it can reach a Windows build. See macos.py for the mapping.
+IS_MAC = sys.platform == "darwin"
+if IS_MAC:
+    import macos
+
+
+def platform_name():
+    """What the UI adapts its wording and modifier keys to."""
+    return "windows" if os.name == "nt" else "mac" if IS_MAC else "other"
+
 
 def _js_str(s):
     """Quote a Python string for injection into evaluate_js."""
@@ -56,6 +69,8 @@ def _js_str(s):
 # ----------------------------------------------------------------------------
 
 def prefs_path():
+    if IS_MAC:
+        return os.path.join(macos.support_dir(), "prefs.json")
     base = (os.environ.get("LOCALAPPDATA")
             or os.environ.get("XDG_CONFIG_HOME")
             or os.path.expanduser("~"))
@@ -131,6 +146,8 @@ def set_clipboard(text):
     unavailable. execCommand('copy') needs a selection and a user gesture and is
     unreliable inside a webview, so Win32 is the dependable route.
     """
+    if IS_MAC:
+        return macos.set_clipboard(text)
     if os.name != "nt":
         return False
     import ctypes
@@ -304,6 +321,10 @@ def check_for_update(timeout=6.0):
         "asset": asset,
         "size": size,
         "digest": digest,
+        # Only the Windows build can update itself: the asset is an Inno Setup
+        # installer. Elsewhere the button opens the release page instead, which
+        # is the honest version of the same offer.
+        "installable": os.name == "nt" and bool(asset),
     }
 
 
@@ -371,7 +392,8 @@ def install_update(path):
     something has to be on screen while the app it replaces disappears.
     """
     if os.name != "nt":
-        raise RuntimeError("the updater is Windows-only")
+        raise RuntimeError("the updater is Windows-only - download the new "
+                           "version from the release page")
     if not os.path.isfile(path):
         raise IOError("installer is missing")
     import subprocess
@@ -447,6 +469,8 @@ def _convert_command(fmt, bits, transfer):
 
 
 def context_menu_state():
+    if IS_MAC:
+        return macos.quick_action_state()
     if os.name != "nt":
         return False
     import winreg
@@ -458,6 +482,12 @@ def context_menu_state():
 
 
 def set_context_menu(enable):
+    if IS_MAC:
+        return macos.set_quick_action(enable, _self_argv())
+    return _set_context_menu_windows(enable)
+
+
+def _set_context_menu_windows(enable):
     """
     Add or remove the right-click "Convert to sRGB" submenu.
 
@@ -503,13 +533,8 @@ def set_context_menu(enable):
     return True
 
 
-def convert_cli(path, fmt="png", bits=16, transfer="display", layer=None):
-    """
-    Headless convert, for the right-click menu. No window, no prompts.
-
-    Errors surface as a message box rather than a silent failure, because there
-    is no console to print to when the shell launches this.
-    """
+def cli_settings(fmt="png", bits=16, transfer="display", layer=None):
+    """The settings every shell-driven convert uses. See convert_cli."""
     config = core.ACES_CONFIGS[core.DEFAULT_CONFIG_LABEL]
     display = core.default_display(config)
     settings = {
@@ -538,10 +563,24 @@ def convert_cli(path, fmt="png", bits=16, transfer="display", layer=None):
         "suffix": core.layer_tag(layer)
                   + ("_linear" if transfer == "linear" else "_srgb"),
     }
+    return settings
+
+
+def convert_cli(path, fmt="png", bits=16, transfer="display", layer=None):
+    """
+    Headless convert, for the right-click menu. No window, no prompts.
+
+    Errors surface as a message box rather than a silent failure, because there
+    is no console to print to when the shell launches this.
+    """
+    settings = cli_settings(fmt, bits, transfer, layer)
     try:
         out, info = core.convert_one(path, settings)
         return out
     except Exception as e:
+        if IS_MAC:
+            macos.alert("EXR → sRGB", "Could not convert:\n\n%s\n\n%s" % (path, e))
+            return None
         try:
             import ctypes
             ctypes.windll.user32.MessageBoxW(
@@ -550,6 +589,56 @@ def convert_cli(path, fmt="png", bits=16, transfer="display", layer=None):
         except Exception:
             pass
         return None
+
+
+def convert_menu(paths):
+    """
+    The macOS Quick Action: ask which preset, convert the selection, report.
+
+    One Quick Action with a chooser stands in for the Explorer submenu, since
+    Finder cannot nest them - and the chooser is built from CONVERT_VERBS, so
+    the presets still live in one place. Unlike a Windows verb, which Explorer
+    launches once per file, Finder hands over the whole selection at once, so
+    a 240-frame sequence is one process and one thread pool rather than 240
+    processes.
+    """
+    paths = [p for p in paths
+             if os.path.isfile(p) and p.lower().endswith(".exr")]
+    if not paths:
+        return 1
+    labels = [v[1] for v in CONVERT_VERBS]
+    what = ("%d files" % len(paths)) if len(paths) > 1 \
+        else os.path.basename(paths[0])
+    pick = macos.choose("EXR → sRGB", "Convert %s to:" % what, labels)
+    if not pick:
+        return 0
+    _key, label, fmt, bits, transfer = next(v for v in CONVERT_VERBS
+                                            if v[1] == pick)
+    settings = cli_settings(fmt, bits, transfer)
+    errors = []
+
+    def on_result(i, path, out, info, err):
+        if err is not None:
+            errors.append("%s: %s" % (os.path.basename(path), err))
+
+    core.convert_many(paths, settings, on_result=on_result)
+    done = len(paths) - len(errors)
+    if done:
+        macos.notify("EXR → sRGB", "Saved %d file%s · %s" % (
+            done, "" if done == 1 else "s", label))
+    if errors:
+        more = "\n…and %d more" % (len(errors) - 8) if len(errors) > 8 else ""
+        macos.alert("EXR → sRGB",
+                    "Could not convert %d of %d:\n\n%s%s" % (
+                        len(errors), len(paths), "\n".join(errors[:8]), more))
+    return 1 if errors else 0
+
+
+def _self_argv():
+    """How to run this app headless: the bundle's binary, or python + script."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable]
+    return [sys.executable, os.path.abspath(__file__)]
 
 
 # Explorer resolves .exr through this before it ever looks at
@@ -979,8 +1068,33 @@ VIEWER_CHROME_H = 96
 VIEWER_CHROME_W = 32
 
 
+def _mac_screen():
+    """
+    The display pywebview positions windows on, at the origin.
+
+    The Cocoa backend takes x/y relative to the screen holding the key window
+    - its `mainScreen` - with y flipped to count from the top, and reports
+    positions back the same way. So on macOS a position is screen-local and
+    the only rect it can be checked against is that screen's own. NSScreen's
+    frames are bottom-up and global, which is why webview.screens cannot be
+    used as-is: on a stacked layout every rect would be compared in the wrong
+    space.
+    """
+    import AppKit
+    f = AppKit.NSScreen.mainScreen().visibleFrame()
+    full = AppKit.NSScreen.mainScreen().frame()
+    # visibleFrame excludes the menu bar and Dock; keep its top as the offset
+    top = int(full.origin.y + full.size.height - (f.origin.y + f.size.height))
+    return 0, top, int(f.size.width), int(f.size.height)
+
+
 def primary_screen():
     """(x, y, width, height) of the display to open on."""
+    if IS_MAC:
+        try:
+            return _mac_screen()
+        except Exception:                           # noqa: BLE001
+            pass
     try:
         screens = webview.screens
         # The origin screen is the primary one; on stacked layouts the others
@@ -1010,6 +1124,12 @@ MINIMISED = -30000
 
 def screen_rects():
     """Every display as (x, y, w, h). Coordinates can be negative."""
+    if IS_MAC:
+        try:
+            x, y, w, h = _mac_screen()
+            return [(0, 0, w, h + y)]
+        except Exception:                           # noqa: BLE001
+            pass
     try:
         return [(getattr(s, "x", 0), getattr(s, "y", 0), s.width, s.height)
                 for s in webview.screens] or [(0, 0, 1920, 1080)]
@@ -1189,6 +1309,7 @@ class ViewerApi:
             "name": os.path.basename(self._path),
             "layers": self._layers,
             "theme": load_prefs().get("theme", "dark"),
+            "platform": platform_name(),
         }
 
     def render(self, exposure=0.0, gamma=1.0, channel="rgb", layer=None):
@@ -1327,8 +1448,10 @@ class ViewerApi:
             return {"ok": False, "error": str(e)}
 
     def reveal(self, path):
-        """Show a converted file in Explorer."""
+        """Show a converted file in Explorer, or Finder."""
         try:
+            if IS_MAC:
+                return macos.reveal(path)
             if os.name == "nt" and os.path.exists(path):
                 import subprocess
                 subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
@@ -1525,6 +1648,7 @@ class Api:
             "hint": "Drop .exr files or folders anywhere in this window.",
             "theme": load_prefs().get("theme", "dark"),
             "preview_width": load_prefs().get("preview_width", 360),
+            "platform": platform_name(),
         }
 
     def set_preview_width(self, width):
@@ -1747,6 +1871,13 @@ class Api:
         first moment after an upgrade that anything can notice the registration
         points at the previous filename.
         """
+        if IS_MAC:
+            # Only a bundle can be a default handler - see macos.bundle_path.
+            if not macos.bundle_path():
+                return {"supported": False, "associated": False}
+            associated, current = macos.association_state()
+            return {"supported": True, "associated": associated,
+                    "current": current or "", "repaired": False}
         if os.name != "nt":
             return {"supported": False, "associated": False}
         repaired = repair_association()
@@ -1758,6 +1889,14 @@ class Api:
                 "current": current or "", "repaired": repaired}
 
     def context_menu(self):
+        if IS_MAC:
+            # Repaired on the way past, like the Windows association: a
+            # Quick Action records the app's absolute path, so moving the
+            # .app or running a new copy elsewhere leaves it calling nothing.
+            if macos.repair_quick_action(_self_argv()):
+                self._js("onLog",
+                         "Updated the Finder Quick Action to this copy.", "dim")
+            return {"supported": True, "enabled": macos.quick_action_state()}
         if os.name != "nt":
             return {"supported": False, "enabled": False}
         return {"supported": True, "enabled": context_menu_state()}
@@ -1765,9 +1904,15 @@ class Api:
     def set_context_menu(self, enable):
         try:
             state = set_context_menu(bool(enable))
-            self._js("onLog",
-                     "Added the right-click convert menu." if state
-                     else "Removed the right-click convert menu.", "ok")
+            if IS_MAC:
+                self._js("onLog",
+                         "Added “%s” to Finder’s Quick Actions." %
+                         macos.QUICK_ACTION_LABEL if state
+                         else "Removed the Finder Quick Action.", "ok")
+            else:
+                self._js("onLog",
+                         "Added the right-click convert menu." if state
+                         else "Removed the right-click convert menu.", "ok")
             return {"ok": True, "enabled": state}
         except Exception as e:
             self._js("onLog", "Could not change the context menu: %s" % e, "err")
@@ -1783,6 +1928,8 @@ class Api:
         when the shell still names someone else the dialog is offered instead
         of reporting a success that the next double-click contradicts.
         """
+        if IS_MAC:
+            return self._set_association_mac(bool(enable))
         try:
             set_association(bool(enable))
             if not enable:
@@ -1803,6 +1950,43 @@ class Api:
             return {"ok": True, "associated": done}
         except Exception as e:
             self._js("onLog", "Could not change file association: %s" % e, "err")
+            return {"ok": False, "error": str(e)}
+
+    def _set_association_mac(self, enable):
+        """
+        Launch Services can be told directly, so there is no chooser fallback.
+
+        The displaced handler is kept in prefs so unticking hands .exr back
+        to whatever had it - usually Preview - rather than leaving it with an
+        app the user just said they did not want.
+        """
+        try:
+            prev = macos.set_association(
+                enable, load_prefs().get("mac_previous_exr_handler"))
+            save_prefs({"mac_previous_exr_handler": prev})
+            done, current = macos.association_state()
+            if enable and not done:
+                who = os.path.basename(current or "") or "another app"
+                self._js("onLog", "macOS still opens .exr with %s." % who,
+                         "warn")
+            elif enable:
+                self._js("onLog", "EXR files now open in this viewer.", "ok")
+            else:
+                who = os.path.basename(current or "") or "the system default"
+                self._js("onLog",
+                         "Handed .exr back to %s." % who.replace(".app", ""),
+                         "ok")
+            return {"ok": True, "associated": done}
+        except macos.Declined:
+            # The user's answer to the system prompt, not a failure.
+            done, current = macos.association_state()
+            who = os.path.basename(current or "").replace(".app", "")
+            self._js("onLog", "Nothing changed — .exr still opens with %s."
+                     % (who or "the same app"), "dim")
+            return {"ok": True, "associated": done}
+        except Exception as e:                      # noqa: BLE001
+            self._js("onLog", "Could not change file association: %s" % e,
+                     "err")
             return {"ok": False, "error": str(e)}
 
     def view(self, index, s, exposure=0.0, gamma=1.0, channel="rgb",
@@ -2185,6 +2369,20 @@ def main():
     # `--diag`: what the app thinks it is and where it thinks it lives. Exists
     # because a shell-integration bug looks identical from outside whether the
     # cause is the path, the hive or the permissions.
+    if "--diag" in argv and IS_MAC:
+        print("version    : %s" % VERSION)
+        print("frozen     : %s" % bool(getattr(sys, "frozen", False)))
+        print("executable : %s" % sys.executable)
+        print("bundle     : %s" % macos.bundle_path())
+        print("base dir   : %s" % BASE_DIR)
+        print("prefs      : %s" % prefs_path())
+        print("handler    : %s" % (macos.association_state(),))
+        print("quick act. : %s" % (macos.quick_action_path()
+                                   if macos.quick_action_state() else None))
+        print("runs       : %s" % macos.installed_script())
+        print("would run  : %s" % macos.quick_action_script(_self_argv()))
+        return sys.exit(0)
+
     if "--diag" in argv:
         import winreg
         print("version    : %s" % VERSION)
@@ -2223,11 +2421,23 @@ def main():
     # Registering is silent and always safe; making ourselves the *default* can
     # only be done by the user clicking in Windows' own dialog, so it is asked
     # once at install time rather than never.
+    # `--convert-menu <paths...>`: what the macOS Quick Action runs. Headless
+    # like --convert, but asks which preset first - see convert_menu.
+    if "--convert-menu" in argv and IS_MAC:
+        return sys.exit(convert_menu(
+            [a for a in argv if a != "--convert-menu"]))
+
     if "--choose-default" in argv:
         if association_state()[0]:
             print("already the default for .exr")
             return sys.exit(0)
         return sys.exit(0 if choose_default() else 1)
+
+    if IS_MAC and ("--register" in argv or "--unregister" in argv):
+        on = "--register" in argv
+        macos.set_quick_action(on, _self_argv())
+        print("%s the Finder Quick Action" % ("installed" if on else "removed"))
+        return sys.exit(0)
 
     if "--register" in argv or "--unregister" in argv:
         on = "--register" in argv
@@ -2293,15 +2503,9 @@ def main():
     if ("--view" in sys.argv or (args and args[0].lower().endswith(".exr"))) \
             and args and os.path.isfile(args[0]):
         open_viewer(args[0])
-        icon = os.path.join(BASE_DIR, "app.ico")
-        # private_mode=True: no persistent WebView2 profile. Nothing here uses
-        # localStorage - preferences live in a JSON file on the Python side - and
-        # a persistent profile caches the UI, which after an update can serve a
-        # stale viewer.html against a fresh viewer.js. That skew breaks wire()
-        # on an element that no longer exists and blanks the whole window.
-        webview.start(debug=bool(os.environ.get("EXR2SRGB_DEBUG")),
-                      private_mode=True,
-                      **({"icon": icon} if os.path.exists(icon) else {}))
+        # On macOS the same process stays up for every later double-click, so
+        # the Finder hooks go in here too - see macos.install_app_events.
+        _start_gui()
         return
 
     # Only the converter is single-instance. --view and --convert returned
@@ -2309,6 +2513,26 @@ def main():
     if not claim_single_instance():
         focus_existing_instance()
         return
+
+    open_converter()
+    _start_gui()
+
+
+# The converter window, once made. macOS reopens it from the Dock rather than
+# by launching a second process, so it has to be findable from an event.
+_converter = {"window": None}
+
+
+def open_converter():
+    """Create the converter window, or bring the existing one forward."""
+    existing = _converter["window"]
+    if existing is not None:
+        try:
+            existing.show()
+            existing.restore()
+            return existing
+        except Exception:                           # noqa: BLE001
+            _converter["window"] = None
 
     api = Api()
     # Match the saved theme so the window does not flash the wrong colour before
@@ -2337,12 +2561,53 @@ def main():
         text_select=False,
     )
     api._window = window
+    _converter["window"] = window
+
+    def forget():
+        _converter["window"] = None
+
+    window.events.closed += forget
     remember_geometry(window, "main_geometry")
     window.events.loaded += lambda: attach_dnd(window, api)
-    # On Windows the taskbar icon comes from the exe (spec: icon='app.ico');
-    # this is what gives a source run the same mark instead of a Python one.
-    icon = os.path.join(BASE_DIR, "app.ico")
-    kwargs = {"icon": icon} if os.path.exists(icon) else {}
+    return window
+
+
+def _mac_open_files(paths):
+    """Finder sent files to the running app: a viewer each, as a double-click."""
+    for path in paths:
+        if os.path.isfile(path) and path.lower().endswith(".exr"):
+            open_viewer(path)
+
+
+def _mac_reopen():
+    """Dock icon clicked. Showing only viewers is not 'already open'."""
+    open_converter()
+
+
+def _start_gui():
+    """
+    Run the event loop. Blocks until the last window closes.
+
+    private_mode=True: no persistent WebView2 profile. Nothing here uses
+    localStorage - preferences live in a JSON file on the Python side - and a
+    persistent profile caches the UI, which after an update can serve a stale
+    viewer.html against a fresh viewer.js. That skew breaks wire() on an
+    element that no longer exists and blanks the whole window. WKWebView gets
+    the same non-persistent data store from the flag.
+    """
+    kwargs = {}
+    if IS_MAC:
+        # Before start: a cold launch delivers its events as soon as the run
+        # loop does, and an unhandled open-file event is simply dropped.
+        macos.install_app_events(_mac_open_files, _mac_reopen)
+        if not getattr(sys, "frozen", False):
+            macos.set_dock_icon(os.path.join(BASE_DIR, "app.icns"))
+    else:
+        # On Windows the taskbar icon comes from the exe (spec: icon='app.ico');
+        # this is what gives a source run the same mark instead of a Python one.
+        icon = os.path.join(BASE_DIR, "app.ico")
+        if os.path.exists(icon):
+            kwargs["icon"] = icon
     webview.start(debug=bool(os.environ.get("EXR2SRGB_DEBUG")),
                   private_mode=True, **kwargs)
 

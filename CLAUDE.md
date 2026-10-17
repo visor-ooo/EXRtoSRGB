@@ -858,6 +858,14 @@ shaved the rim flat on four sides. The tile is redrawn on Apple's grid (824 on
 because reading VERSION and locating ISCC in cmd is how the last build script
 broke - a Python one-liner inside a `for /f` dies on its own parentheses.
 
+**The installer compiles into `%TEMP%` and is moved in afterwards.** Inno writes
+the setup program and then patches its resources in place, and since the repo
+moved into Dropbox the sync client grabs the new 45 MB file mid-write and holds
+it - so the patch dies with *"Resource update error: EndUpdateResource failed,
+try excluding the Output folder from your antivirus software (110)"*. It is
+reproducible on every run and **it is not antivirus**; do not go looking for a
+Defender exclusion. Same reason `build_exe.bat` sends PyInstaller's scratch there.
+
 **Per-user, `PrivilegesRequired=lowest`.** Everything the app registers lives in
 `HKCU`, so a machine-wide install would need elevation to place files and then
 have to drop back to the signed-in user to register anything. `%LOCALAPPDATA%

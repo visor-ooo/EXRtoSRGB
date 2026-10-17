@@ -7,16 +7,20 @@
 [![Release](https://img.shields.io/github/v/release/visorooo/EXRtoSRGB?style=flat-square)](../../releases)
 [![Downloads](https://img.shields.io/github/downloads/visorooo/EXRtoSRGB/total?style=flat-square)](../../releases)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square)](../../releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)](#install)
 
 Batch convert to **PNG / JPEG / TIFF**, view `.exr` files by double-clicking them,
 pull **cryptomatte** mattes, and write **scene-linear 32-bit TIFF** when the
-destination is a comp rather than a screen.
+destination is a comp rather than a screen. **On Windows and macOS.**
 
 <br>
 
 <a href="../../releases/latest">
-  <img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-latest%20release-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download the latest release" height="46">
+  <img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-latest%20release-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for Windows" height="46">
+</a>
+&nbsp;
+<a href="../../releases/tag/v3.3.0">
+  <img src="https://img.shields.io/badge/⬇%20Download%20for%20macOS-Apple%20Silicon-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for macOS" height="46">
 </a>
 
 **Installs in seconds. No admin needed.** · [All releases](../../releases)
@@ -36,7 +40,8 @@ scene value and the display colour side by side.</sub>
 
 <img src="docs/context_menu.png" alt="The Explorer right-click menu with a Convert to sRGB submenu listing the five presets" width="880">
 
-<sub>Or skip the app entirely — right-click any `.exr` and convert it in place.</sub>
+<sub>Or skip the app entirely — right-click any `.exr` and convert it in place.
+On a Mac it's <b>Quick Actions → Convert to sRGB…</b> in Finder.</sub>
 
 </div>
 
@@ -62,7 +67,8 @@ checked frame-for-frame against Nuke conversions of the same renders.
 | **Cryptomatte** | Read the manifest, click objects straight off the image, export mattes. |
 | **Multi-part EXR** | Every part of a File Output node's export shows up as a layer. |
 | **Sequences** | Drop one frame, get the run. Step through frames next to the preview. |
-| **Right-click convert** | Five presets in Explorer, no window opened. |
+| **Right-click convert** | Five presets in Explorer, or a Quick Action in Finder. No window opened. |
+| **Windows and macOS** | The same app on both, down to the colour pipeline and the test suite. |
 | **Command line** | `--cli` for a farm, a build step, or a shell loop. |
 | **Tells you about updates** | Checks GitHub on launch and shows a pill in the title bar when there's a newer release. |
 
@@ -70,7 +76,7 @@ checked frame-for-frame against Nuke conversions of the same renders.
 
 ## Install
 
-### [⬇ Download the latest release](../../releases/latest)
+### Windows — [⬇ download the latest release](../../releases/latest)
 
 Run `EXRtoSRGB_Setup_v<version>.exe`. It installs like any other application:
 
@@ -94,10 +100,9 @@ are compiled in. Windows supplies the webview, so there's no bundled browser.
 > **More info → Run anyway.** Code signing is a paid annual certificate rather than
 > anything that can be fixed in the source.
 
-### macOS
+### macOS — [⬇ download v3.3.0](../../releases/tag/v3.3.0)
 
-From the [releases page](../../releases), open
-`EXRtoSRGB_v<version>_macOS_arm64.dmg` and drag **EXR to sRGB** into
+Open `EXRtoSRGB_v<version>_macOS_arm64.dmg` and drag **EXR to sRGB** into
 Applications. Same app: the converter, the viewer, cryptomatte and the command
 line are the same code, and the test suite — the ACES ladder included — passes
 on both.
@@ -130,6 +135,8 @@ python exr2srgb.py
 ```
 
 `EXR2SRGB_DEBUG=1` opens devtools. Tests are `pip install pytest && pytest -q`.
+On a Mac the system Python is too old for the wheels — use Python 3.12 or later
+in a venv.
 
 </details>
 

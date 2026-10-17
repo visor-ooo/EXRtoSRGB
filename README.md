@@ -15,13 +15,9 @@ destination is a comp rather than a screen. **On Windows and macOS.**
 
 <br>
 
-<a href="../../releases/latest">
-  <img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-latest%20release-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for Windows" height="46">
-</a>
+<a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-latest%20release-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for Windows" height="46"></a>
 &nbsp;
-<a href="../../releases/tag/v3.3.0">
-  <img src="https://img.shields.io/badge/⬇%20Download%20for%20macOS-Apple%20Silicon-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for macOS" height="46">
-</a>
+<a href="../../releases/tag/v3.3.0"><img src="https://img.shields.io/badge/⬇%20Download%20for%20macOS-Apple%20Silicon-1f20f1?style=for-the-badge&labelColor=1f20f1&color=2b2cf5" alt="Download for macOS" height="46"></a>
 
 **Installs in seconds. No admin needed.** · [All releases](../../releases)
 

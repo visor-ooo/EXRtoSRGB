@@ -1425,8 +1425,14 @@ def test_worker_count_is_bounded(tmp_path):
 # Sequence grouping
 # ---------------------------------------------------------------------------
 
+def _p(folder, name):
+    """An absolute path in this OS's own syntax. Windows literals like
+    C:\\r\\x.exr are one bare filename to posixpath, so basename() is a no-op."""
+    return os.path.join(os.path.abspath(os.sep), folder, name)
+
+
 def test_sequence_collapses():
-    paths = [r"C:\r\beauty.%04d.exr" % i for i in range(1, 121)]
+    paths = [_p("r", "beauty.%04d.exr" % i) for i in range(1, 121)]
     entries = core.group_sequences(paths)
     assert len(entries) == 1
     e = entries[0]
@@ -1437,37 +1443,37 @@ def test_sequence_collapses():
 
 
 def test_single_file_not_collapsed():
-    entries = core.group_sequences([r"C:\r\beauty.0001.exr"])
+    entries = core.group_sequences([_p("r", "beauty.0001.exr")])
     assert entries[0]["kind"] == "single"
 
 
 def test_distinct_sequences_stay_separate():
-    paths = ([r"C:\r\beauty.%04d.exr" % i for i in (1, 2)]
-             + [r"C:\r\shadow.%04d.exr" % i for i in (1, 2)])
+    paths = ([_p("r", "beauty.%04d.exr" % i) for i in (1, 2)]
+             + [_p("r", "shadow.%04d.exr" % i) for i in (1, 2)])
     entries = core.group_sequences(paths)
     assert len(entries) == 2
     assert {e["label"] for e in entries} == {"beauty.####.exr", "shadow.####.exr"}
 
 
 def test_same_name_different_folders_stay_separate():
-    paths = [r"C:\a\f.%04d.exr" % i for i in (1, 2)] + \
-            [r"C:\b\f.%04d.exr" % i for i in (1, 2)]
+    paths = [_p("a", "f.%04d.exr" % i) for i in (1, 2)] + \
+            [_p("b", "f.%04d.exr" % i) for i in (1, 2)]
     assert len(core.group_sequences(paths)) == 2
 
 
 def test_padding_difference_stays_separate():
-    paths = [r"C:\r\f.%04d.exr" % i for i in (1, 2)] + \
-            [r"C:\r\f.%06d.exr" % i for i in (1, 2)]
+    paths = [_p("r", "f.%04d.exr" % i) for i in (1, 2)] + \
+            [_p("r", "f.%06d.exr" % i) for i in (1, 2)]
     assert len(core.group_sequences(paths)) == 2
 
 
 def test_expand_roundtrip():
-    paths = [r"C:\r\beauty.%04d.exr" % i for i in range(1, 11)]
+    paths = [_p("r", "beauty.%04d.exr" % i) for i in range(1, 11)]
     assert core.expand_entries(core.group_sequences(paths)) == paths
 
 
 def test_unnumbered_file_survives():
-    entries = core.group_sequences([r"C:\r\still.exr"])
+    entries = core.group_sequences([_p("r", "still.exr")])
     assert entries[0]["kind"] == "single"
     assert entries[0]["label"] == "still.exr"
 

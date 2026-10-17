@@ -16,8 +16,10 @@ EXRtoSRGB_Setup_v<version>.exe next to it.
 
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,16 +66,36 @@ def main():
                                      os.path.getsize(exe) / 1e6))
     print("  using  %s\n" % iscc)
 
-    r = subprocess.run(
-        [iscc, "/DAppVersion=%s" % ver, os.path.join(HERE, "installer.iss")],
-        cwd=HERE)
-    if r.returncode != 0:
-        sys.exit("\nBUILD FAILED - Inno Setup returned %d" % r.returncode)
+    # Compile outside the repo, then move the finished file in.
+    #
+    # The repo lives in Dropbox since 2026-10-16, and Inno builds the setup
+    # program by writing the file and then patching its resources in place.
+    # Dropbox picks the new 45 MB file up mid-write and holds it, so the patch
+    # fails: "Resource update error: EndUpdateResource failed, try excluding
+    # the Output folder from your antivirus software (110)". Reproducible on
+    # every run, and it is not antivirus. Building into %TEMP% keeps the sync
+    # client off the file until it is finished - the same reason build_exe.bat
+    # sends PyInstaller's scratch there.
+    scratch = tempfile.mkdtemp(prefix="EXRtoSRGB-iscc-")
+    try:
+        r = subprocess.run(
+            [iscc, "/DAppVersion=%s" % ver, "/O%s" % scratch,
+             os.path.join(HERE, "installer.iss")],
+            cwd=HERE)
+        if r.returncode != 0:
+            sys.exit("\nBUILD FAILED - Inno Setup returned %d" % r.returncode)
 
-    produced = os.path.join(HERE, out)
-    if not os.path.isfile(produced):
-        sys.exit("\nBUILD FAILED - Inno Setup reported success but %s is not "
-                 "here." % out)
+        built = os.path.join(scratch, out)
+        if not os.path.isfile(built):
+            sys.exit("\nBUILD FAILED - Inno Setup reported success but %s is "
+                     "not in %s." % (out, scratch))
+
+        produced = os.path.join(HERE, out)
+        if os.path.exists(produced):
+            os.remove(produced)
+        shutil.move(built, produced)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
     print("\nDone.  %s  (%.1f MB)" % (out, os.path.getsize(produced) / 1e6))
 
 

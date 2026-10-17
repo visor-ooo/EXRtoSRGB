@@ -36,16 +36,19 @@ def home(tmp_path, monkeypatch):
 # Bundle detection
 # ---------------------------------------------------------------------------
 
+@mac_only
 def test_bundle_path_finds_the_app():
     exe = "/Applications/EXR to sRGB.app/Contents/MacOS/EXR to sRGB"
     assert macos.bundle_path(exe) == "/Applications/EXR to sRGB.app"
 
 
+@mac_only
 def test_bundle_path_is_none_for_an_interpreter():
     """A python running the script is not something Launch Services can pick."""
     assert macos.bundle_path("/usr/local/bin/python3") is None
 
 
+@mac_only
 def test_source_run_is_not_a_bundle(monkeypatch):
     monkeypatch.delattr(sys, "frozen", raising=False)
     assert macos.bundle_path() is None
@@ -68,6 +71,7 @@ def _installed(home):
     return info, wf
 
 
+@mac_only
 def test_quick_action_installs_and_removes(home):
     assert not macos.quick_action_state()
     assert macos.set_quick_action(True, ARGV) is True
@@ -76,6 +80,7 @@ def test_quick_action_installs_and_removes(home):
     assert not macos.quick_action_state()
 
 
+@mac_only
 def test_quick_action_is_scoped_to_exr_in_finder(home):
     """Without these two it would sit in the menu of every file on the Mac."""
     macos.set_quick_action(True, ARGV)
@@ -87,6 +92,7 @@ def test_quick_action_is_scoped_to_exr_in_finder(home):
     assert svc["NSMessage"] == "runWorkflowAsService"
 
 
+@mac_only
 def test_quick_action_passes_files_as_arguments(home):
     macos.set_quick_action(True, ARGV)
     _, wf = _installed(home)
@@ -96,6 +102,7 @@ def test_quick_action_passes_files_as_arguments(home):
         "com.apple.Automator.fileSystemObject"
 
 
+@mac_only
 def test_quick_action_quotes_a_path_with_spaces(home):
     """The bundle is 'EXR to sRGB.app' - unquoted, zsh would run 'EXR'."""
     import shlex
@@ -105,6 +112,7 @@ def test_quick_action_quotes_a_path_with_spaces(home):
     assert words[3] == "$@"
 
 
+@mac_only
 def test_repair_repoints_a_moved_app(home):
     macos.set_quick_action(True, ARGV)
     moved = ["/Users/someone/Applications/EXR to sRGB.app/Contents/MacOS/EXR to sRGB"]
@@ -113,6 +121,7 @@ def test_repair_repoints_a_moved_app(home):
     assert macos.repair_quick_action(moved) is False, "second pass is a no-op"
 
 
+@mac_only
 def test_repair_never_installs(home):
     """Like repair_association: it only fixes what the user already turned on."""
     assert macos.repair_quick_action(ARGV) is False

@@ -1,6 +1,6 @@
 # Roadmap
 
-Where this tool is and where it goes next. Last updated 2026-08-07.
+Where this tool is and where it goes next. Last updated 2026-10-16.
 
 ---
 
@@ -358,6 +358,28 @@ The honest limitation, still in the README: an app cannot *force* a file type on
 Windows, and where it loses, the extra click is Microsoft's design rather than a
 workaround.
 
+## Shipped — v3.3 — macOS
+
+The same app on a Mac: converter, viewer, cryptomatte, CLI, from the same
+`core.py` and `ui/`. Every macOS piece of shell integration sits in `macos.py`,
+imported only on darwin, so no Windows code path changed.
+
+- **Double-click and Open With.** The bundle claims `com.ilm.openexr-image` as
+  an Alternate handler, and the ⚙ toggle makes it the default through Launch
+  Services, which asks the user to confirm. Files double-clicked while the app
+  is running open as viewers in the same process, the way macOS delivers them.
+- **Right-click → Quick Actions → Convert to sRGB…** — one action with a
+  preset chooser built from `CONVERT_VERBS`, converting the whole Finder
+  selection in one job.
+- **⌘ / ⌥ in place of Ctrl / Alt**, Finder in place of Explorer, and an update
+  button that opens the release page rather than running a Windows installer.
+- **`build_mac.sh`** → `.app` + `.dmg`, ad-hoc signed. Not notarised, and
+  Apple Silicon only for now: OpenImageIO's wheels are per architecture.
+
+Before building it, a search for an existing Mac tool came up empty: DJV and
+mrv2 view EXR through OCIO but don't batch-convert with layer selection, tev
+has no OCIO, and `oiiotool` is the transform without the rest.
+
 ## V3.2
 
 Nothing here is a bug — v3.0 does what it set out to do. These are the four things
@@ -697,7 +719,7 @@ not. Zero bundle cost, no licensing obligation, and anyone who wants video alrea
 has Resolve, After Effects or ffmpeg. The tool keeps writing image sequences, which
 is what those applications want as input anyway.
 
-### 8. macOS — *dropped* (possible, but the best parts do not port)
+### 8. macOS — **done in v3.3** (originally dropped; notes kept below)
 
 `core.py` is already portable: OIIO, OCIO and numpy all run on macOS, and pywebview
 uses WebKit there. The converter and viewer windows would work.

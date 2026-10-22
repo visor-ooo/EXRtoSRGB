@@ -265,10 +265,10 @@ def focus_existing_instance():
 # produce an error the user has to dismiss to use a converter.
 # ----------------------------------------------------------------------------
 
-RELEASES_API = "https://api.github.com/repos/visorooo/EXRtoSRGB/releases/latest"
-RELEASES_PAGE = "https://github.com/visorooo/EXRtoSRGB/releases/latest"
-REPO_URL = "https://github.com/visorooo/EXRtoSRGB"
-VISOR_GITHUB = "https://github.com/visorooo"
+RELEASES_API = "https://api.github.com/repos/visor-ooo/EXRtoSRGB/releases/latest"
+RELEASES_PAGE = "https://github.com/visor-ooo/EXRtoSRGB/releases/latest"
+REPO_URL = "https://github.com/visor-ooo/EXRtoSRGB"
+VISOR_GITHUB = "https://github.com/visor-ooo"
 
 
 def _version_tuple(text):
@@ -328,7 +328,7 @@ def check_for_update(timeout=6.0):
     }
 
 
-ASSET_PREFIX = "https://github.com/visorooo/EXRtoSRGB/releases/download/"
+ASSET_PREFIX = "https://github.com/visor-ooo/EXRtoSRGB/releases/download/"
 
 
 def download_update(info, on_progress=None, timeout=30.0):
@@ -1732,7 +1732,7 @@ class Api:
         """
         url = str(url or "")
         # An allowlist, and deliberately not a bare prefix on the account: a
-        # prefix match on ".../visorooo" would also accept ".../visorooo-evil",
+        # prefix match on ".../visor-ooo" would also accept ".../visor-ooo-evil",
         # so the profile is compared exactly and only the repo gets a prefix
         # (it needs one, for /releases/tag/vX).
         if not (url == VISOR_GITHUB or url.startswith(REPO_URL)):

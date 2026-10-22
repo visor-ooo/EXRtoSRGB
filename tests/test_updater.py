@@ -67,9 +67,11 @@ def served(monkeypatch):
 
 @pytest.mark.parametrize("url", [
     "https://evil.example.com/EXRtoSRGB_Setup.exe",
-    "http://github.com/visorooo/EXRtoSRGB/releases/download/v1/x.exe",
+    "http://github.com/visor-ooo/EXRtoSRGB/releases/download/v1/x.exe",
     "https://github.com/someone-else/EXRtoSRGB/releases/download/v1/x.exe",
-    "https://github.com/visorooo/EXRtoSRGB/issues/1",
+    # The account the repo moved off; anyone could re-register the name.
+    "https://github.com/visorooo/EXRtoSRGB/releases/download/v1/x.exe",
+    "https://github.com/visor-ooo/EXRtoSRGB/issues/1",
     "",
 ])
 def test_refuses_anything_that_is_not_our_release_asset(url, served):

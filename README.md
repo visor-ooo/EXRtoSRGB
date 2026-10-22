@@ -4,8 +4,8 @@
 
 **Turn ACES-linear EXR renders into display-ready images — without opening your compositing app.**
 
-[![Release](https://img.shields.io/github/v/release/visorooo/EXRtoSRGB?style=flat-square)](../../releases)
-[![Downloads](https://img.shields.io/github/downloads/visorooo/EXRtoSRGB/total?style=flat-square)](../../releases)
+[![Release](https://img.shields.io/github/v/release/visor-ooo/EXRtoSRGB?style=flat-square)](../../releases)
+[![Downloads](https://img.shields.io/github/downloads/visor-ooo/EXRtoSRGB/total?style=flat-square)](../../releases)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)](#install)
 

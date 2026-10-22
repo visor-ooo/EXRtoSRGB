@@ -1731,7 +1731,7 @@ window.addEventListener('pywebviewready', async () => {
   wireManualUpdateCheck();
   if ($('visor-link')) {
     $('visor-link').onclick =
-      () => window.pywebview.api.open_url('https://github.com/visorooo');
+      () => window.pywebview.api.open_url('https://github.com/visor-ooo');
   }
 
   const assoc = await window.pywebview.api.association();

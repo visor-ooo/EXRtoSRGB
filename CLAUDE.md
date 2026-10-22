@@ -2,14 +2,28 @@
 
 Batch converter: ACES-linear EXR → display-ready PNG/JPEG, using OpenColorIO's
 built-in ACES configs so the result matches the renderer's viewport rather than a
-gamma guess. Public on `visorooo/EXRtoSRGB`, MIT. The README is the user
+gamma guess. Public on `visor-ooo/EXRtoSRGB`, MIT. The README is the user
 documentation; `ROADMAP.md` tracks what's next and why.
 
 App, module, exe and repo are all named **EXR → sRGB** as of v2.0. The repo was
 renamed from `EXRtoPNG` on 2026-08-07; GitHub redirects the old URL, so old clones
-and links still resolve. Anything that needs settings, visibility or collaborator
-changes still requires the **visorooo** account — `gabe-xyz` has push but not
-admin.
+and links still resolve.
+
+It moved from the `visorooo` user account to the **`visor-ooo` org** on
+2026-10-22; `gabe-xyz` is an org owner, so settings work from it.
+
+**Open — Gabe's to resolve: the updater moved to `visor-ooo`, but no release
+carries it yet.** `RELEASES_API`, `ASSET_PREFIX`, `REPO_URL` and `VISOR_GITHUB`
+in `exr2srgb.py` (plus `installer.iss`, `ui/app.js`, `ui/index.html`) point at
+`visor-ooo` since 2026-10-22, and `tests/test_updater.py` now refuses a
+`visorooo` asset URL. Installed copies up to v3.3.0 still have `visorooo`
+baked in: their update check finds new releases through GitHub's redirect,
+but `download_update` refuses the `visor-ooo` asset URL the API now returns, so
+those copies need **one manual reinstall** of the next release (built on
+Windows, which needs the installer). They also keep asking `visorooo` for
+releases, so **do not delete the `visorooo` account** while they are in use:
+whoever re-registers the name and creates `EXRtoSRGB` there becomes their
+update source.
 
 ## Shape of the code
 

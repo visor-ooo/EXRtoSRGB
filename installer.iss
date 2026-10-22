@@ -20,7 +20,7 @@
 
 #define AppName        "EXR to sRGB"
 #define AppPublisher   "VISOR"
-#define AppURL         "https://github.com/visorooo/EXRtoSRGB"
+#define AppURL         "https://github.com/visor-ooo/EXRtoSRGB"
 #define ExeName        "EXRtoSRGB.exe"
 
 #ifndef AppVersion

@@ -358,6 +358,21 @@ The honest limitation, still in the README: an app cannot *force* a file type on
 Windows, and where it loses, the extra click is Microsoft's design rather than a
 workaround.
 
+## Shipped — v3.3.1 — the `visor-ooo` org
+
+The repo moved from the `visorooo` user account to the `visor-ooo`
+organization on 2026-10-22. 3.3.1 is the first build that asks the org for
+updates and accepts installers from it. Nothing else changed.
+
+Copies up to 3.3.0 find this release through GitHub's redirect, but their
+updater accepts installers only from `visorooo/…/releases/download/`, and
+GitHub now hands out `visor-ooo/…` URLs. So they say *"Update failed:
+refusing to download from outside the release page"* and offer the release
+page. Checked against the live API with 3.3.0's own updater. That refusal is
+the safety check doing its job, and it costs one manual install; from 3.3.1
+on, in-app updates work again. The `visorooo` account stays until those copies
+are gone, or whoever re-registered the name would become their update source.
+
 ## Shipped — v3.3 — macOS
 
 The same app on a Mac: converter, viewer, cryptomatte, CLI, from the same

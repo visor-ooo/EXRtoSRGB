@@ -12,18 +12,22 @@ and links still resolve.
 It moved from the `visorooo` user account to the **`visor-ooo` org** on
 2026-10-22; `gabe-xyz` is an org owner, so settings work from it.
 
-**Open — Gabe's to resolve: the updater moved to `visor-ooo`, but no release
-carries it yet.** `RELEASES_API`, `ASSET_PREFIX`, `REPO_URL` and `VISOR_GITHUB`
-in `exr2srgb.py` (plus `installer.iss`, `ui/app.js`, `ui/index.html`) point at
-`visor-ooo` since 2026-10-22, and `tests/test_updater.py` now refuses a
-`visorooo` asset URL. Installed copies up to v3.3.0 still have `visorooo`
-baked in: their update check finds new releases through GitHub's redirect,
-but `download_update` refuses the `visor-ooo` asset URL the API now returns, so
-those copies need **one manual reinstall** of the next release (built on
-Windows, which needs the installer). They also keep asking `visorooo` for
-releases, so **do not delete the `visorooo` account** while they are in use:
-whoever re-registers the name and creates `EXRtoSRGB` there becomes their
-update source.
+**The updater follows the org from v3.3.1.** `RELEASES_API`, `ASSET_PREFIX`,
+`REPO_URL` and `VISOR_GITHUB` in `exr2srgb.py` (plus `installer.iss`,
+`ui/app.js`, `ui/index.html`) point at `visor-ooo`, and `tests/test_updater.py`
+refuses a `visorooo` asset URL. v3.3.1 is the first release carrying them
+(published 2026-10-22, macOS `.dmg` first, as a pre-release until the Windows
+installer is uploaded - see the root CLAUDE.md, Open work).
+
+Installed copies up to v3.3.0 still have `visorooo` baked in. Checked against
+the live API with v3.3.0's own updater: the check still finds new releases
+through GitHub's redirect, then `download_update` refuses the `visor-ooo`
+asset URL with *"refusing to download from outside the release page"* and the
+UI offers the release page. So each of those copies needs **one manual
+install** of 3.3.1 or later; the release notes say so. They also keep asking
+`visorooo` for releases, so **do not delete the `visorooo` account** while
+they are in use: whoever re-registers the name and creates `EXRtoSRGB` there
+becomes their update source.
 
 ## Shape of the code
 

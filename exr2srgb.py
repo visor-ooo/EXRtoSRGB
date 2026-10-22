@@ -35,7 +35,7 @@ from webview.dom import DOMEventHandler
 import core
 
 APP_NAME = "EXR → sRGB"
-VERSION = "3.3.0"
+VERSION = "3.3.1"
 
 # _MEIPASS only exists in a frozen build; from source this is the repo folder.
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))

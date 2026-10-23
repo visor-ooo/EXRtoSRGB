@@ -16,18 +16,31 @@ It moved from the `visorooo` user account to the **`visor-ooo` org** on
 `REPO_URL` and `VISOR_GITHUB` in `exr2srgb.py` (plus `installer.iss`,
 `ui/app.js`, `ui/index.html`) point at `visor-ooo`, and `tests/test_updater.py`
 refuses a `visorooo` asset URL. v3.3.1 is the first release carrying them
-(published 2026-10-22, macOS `.dmg` first, as a pre-release until the Windows
-installer is uploaded - see the root CLAUDE.md, Open work).
+(published 2026-10-22; the macOS `.dmg` went up first as a pre-release, the
+Windows installer followed and the release is Latest).
 
 Installed copies up to v3.3.0 still have `visorooo` baked in. Checked against
 the live API with v3.3.0's own updater: the check still finds new releases
 through GitHub's redirect, then `download_update` refuses the `visor-ooo`
 asset URL with *"refusing to download from outside the release page"* and the
 UI offers the release page. So each of those copies needs **one manual
-install** of 3.3.1 or later; the release notes say so. They also keep asking
-`visorooo` for releases, so **do not delete the `visorooo` account** while
-they are in use: whoever re-registers the name and creates `EXRtoSRGB` there
-becomes their update source.
+install** of 3.3.1 or later; the release notes say so.
+
+**So the `visorooo` account is kept dormant, permanently** - never deleted,
+never converted to an org, and **no repo is ever created on it again**.
+Those copies keep asking `visorooo` for releases: delete the account and the
+username frees up immediately, and whoever re-registered it would sit at
+exactly the path baked into their `ASSET_PREFIX`, pass their own check, and
+get an installer executed on those machines. Creating a repo there is the
+same hazard from the other direction - `visorooo/EXRtoSRGB` 301-redirects to
+the org today, which is the only reason those copies still see new releases
+at all, and a new repo taking that name kills the redirect.
+
+The rule used to read "while they are in use". That condition can never be
+checked: the app has ~30 downloads across every release and GitHub downloads
+are anonymous. A dormant account costs nothing, so it stays. The decision is
+recorded for the studio in the visor Shared drive at
+`00_ADMIN/07_Tools/github-visor-ooo/MIGRACAO_GITHUB_VISOR-OOO.md`.
 
 ## Shape of the code
 
